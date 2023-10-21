@@ -1,23 +1,49 @@
 #!/usr/bin/python3
-'''A script that generates random HTTP request logs.
-'''
-import random
+
+""" Web Server Log Analyzer """
+
 import sys
-import datetime
-from time import sleep
 
 
-for i in range(10000):
-    sleep(random.random())
-    sys.stdout.write("{:d}.{:d}.{:d}.{:d} - [{}] \"GET {} {}\" {} {}\n".format(
-        random.randint(1, 255),
-        random.randint(1, 255),
-        random.randint(1, 255),
-        random.randint(1, 255),
-        datetime.datetime.now(),
-        '/projects/1216',
-        'HTTP/1.1',
-        random.choice([200, 301, 400, 401, 403, 404, 405, 500]),
-        random.randint(1, 1024)
-    ))
-    sys.stdout.flush()
+def show_log_summary(stats, total_size):
+    """ Display web server log summary """
+    print(f"File size: {total_size}")
+    for code, count in sorted(stats.items()):
+        if count > 0:
+            print(f"{code}: {count}")
+
+
+http_status = {"200": 0, "301": 0, "400": 0, "401": 0,
+               "403": 0, "404": 0, "405": 0, "500": 0}
+log_count = 0
+total_bytes = 0
+
+try:
+    for log_line in sys.stdin:
+        if log_count > 0 and log_count % 10 == 0:
+            show_log_summary(http_status, total_bytes)
+
+        log_parts = log_line.split()
+        log_count += 1
+
+        try:
+            # format: <IP Address> - [<date>]
+            # "GET /projects/260 HTTP/1.1" <status code> <file size>
+            total_bytes += int(log_parts[-1])
+        except Exception:
+            pass
+
+        try:
+            # format: <IP Address> - [<date>]
+            # "GET /projects/260 HTTP/1.1" <status code> <file size>
+            status_code = log_parts[-2]
+            if status_code in http_status:
+                http_status[status_code] += 1
+        except Exception:
+            pass
+
+    show_log_summary(http_status, total_bytes)
+
+except KeyboardInterrupt:
+    show_log_summary(http_status, total_bytes)
+    raise
